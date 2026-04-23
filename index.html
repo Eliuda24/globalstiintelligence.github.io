@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global STI Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --hiv:     #e63946;
+    --gon:     #0d9488;
+    --syph:    #d97706;
+    --black:   #0a0a0a;
+    --white:   #f5f2ec;
+    --offwhite:#ede9e0;
+    --muted:   #888078;
+    --card-bg: #ffffff;
+    --surface: #f7f4ee;
+    --border:  #e2ddd4;
+    --text:    #1a1714;
+    --text-light: #6b6560;
+    --positive:#1a7f4b;
+    --negative:#e63946;
+    --neutral: #4a5568;
+    --active-disease: var(--hiv);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--black);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header-stripe {
+    display: flex;
+    height: 6px;
+  }
+  .stripe-hiv  { background: var(--hiv);  flex: 1; }
+  .stripe-gon  { background: var(--gon);  flex: 1; }
+  .stripe-syph { background: var(--syph); flex: 0 0 120px; }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 40px 24px;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .who-emblem {
+    width: 52px; height: 52px;
+    background: #1a3a5c;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(100,160,220,0.3);
+  }
+
+  .header-titles h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    color: var(--white);
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+  .header-titles p {
+    font-size: 0.78rem;
+    color: #888;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  /* Disease toggle */
+  .disease-tabs {
+    display: flex;
+    gap: 6px;
+  }
+  .disease-tab {
+    padding: 8px 18px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    color: #aaa;
+    background: transparent;
+  }
+  .disease-tab:hover { color: #fff; }
+  .disease-tab.active-hiv  { background: var(--hiv)22;  border-color: var(--hiv);  color: var(--hiv); }
+  .disease-tab.active-gon  { background: var(--gon)22;  border-color: var(--gon);  color: var(--gon); }
+  .disease-tab.active-syph { background: var(--syph)22; border-color: var(--syph); color: var(--syph); }
+
+  /* MAIN */
+  .main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 36px 24px 60px;
+  }
+
+  /* SECTION LABELS */
+  .section-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.25em;
+    color: var(--active-color, #e63946);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  /* KPI CARDS */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .metric-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .metric-card.c-hiv::before  { background: var(--hiv); }
+  .metric-card.c-gon::before  { background: var(--gon); }
+  .metric-card.c-syph::before { background: var(--syph); }
+  .metric-card.c-neutral::before { background: var(--neutral); }
+
+  .metric-badge {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+  }
+  .badge-hiv  { background: #fde8ea; color: var(--hiv); }
+  .badge-gon  { background: #ccfbf1; color: #0d7060; }
+  .badge-syph { background: #fef3c7; color: #92400e; }
+  .badge-neutral { background: #eef2f7; color: var(--neutral); }
+
+  .metric-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 10px;
+  }
+
+  .metric-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  .metric-value.c-hiv  { color: var(--hiv); }
+  .metric-value.c-gon  { color: var(--gon); }
+  .metric-value.c-syph { color: var(--syph); }
+  .metric-value.c-pos  { color: var(--positive); }
+  .metric-value.c-neu  { color: var(--neutral); }
+
+  .metric-sub {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 6px;
+  }
+
+  /* INSIGHT BOX */
+  .insight-box {
+    background: linear-gradient(135deg, #0a0a0a 0%, #0f1a2e 100%);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+  .insight-item .ins-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .insight-item .ins-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.45rem;
+    letter-spacing: 0.04em;
+  }
+  .insight-item .ins-desc {
+    font-size: 0.72rem;
+    color: #888;
+    margin-top: 3px;
+  }
+  .ins-hiv  { color: #f87171; }
+  .ins-gon  { color: #5eead4; }
+  .ins-syph { color: #fcd34d; }
+  .ins-white { color: #e2e8f0; }
+
+  /* CHARTS */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .chart-full { grid-column: 1 / -1; }
+
+  .chart-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+  }
+
+  .chart-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.15rem;
+    letter-spacing: 0.06em;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .chart-subtitle {
+    font-size: 0.72rem;
+    color: var(--text-light);
+    margin-bottom: 20px;
+    font-style: italic;
+  }
+  .chart-container {
+    position: relative;
+    width: 100%;
+  }
+
+  /* LEGEND */
+  .legend-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .legend-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--text-light);
+    font-weight: 500;
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* TIER TABLE */
+  .tier-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  .tier-table th {
+    text-align: left;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    font-weight: 600;
+    padding: 0 8px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tier-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #f0ece4;
+    color: var(--text);
+    vertical-align: middle;
+  }
+  .tier-table tr:last-child td { border-bottom: none; }
+  .tier-table tr:hover td { background: var(--surface); }
+
+  .tier-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+  .tier-HIGH   { background: #fde8ea; color: var(--hiv); }
+  .tier-MEDIUM { background: #fef3c7; color: #92400e; }
+  .tier-LOW    { background: #dcfce7; color: #166534; }
+
+  .trend-up   { color: var(--hiv); font-weight: 700; }
+  .trend-down { color: var(--positive); font-weight: 700; }
+  .trend-neu  { color: var(--neutral); font-weight: 700; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 24px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    letter-spacing: 0.05em;
+  }
+  .footer strong { color: var(--text-light); }
+
+  /* Hidden sections */
+  .disease-section { display: none; }
+  .disease-section.visible { display: block; }
+
+  @media (max-width: 768px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-full { grid-column: 1; }
+    .header-inner { padding: 20px; }
+    .header-titles h1 { font-size: 1.6rem; }
+    .main { padding: 24px 16px 40px; }
+    .metric-value { font-size: 2.4rem; }
+    .disease-tabs { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-stripe">
+    <div class="stripe-hiv"></div>
+    <div class="stripe-gon"></div>
+    <div class="stripe-syph"></div>
+  </div>
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="who-emblem">🌐</div>
+      <div class="header-titles">
+        <h1>Global STI Intelligence</h1>
+        <p>WHO Global Health Observatory · HIV, Gonorrhea &amp; Syphilis Surveillance · 1990–2024</p>
+      </div>
+    </div>
+    <div class="disease-tabs">
+      <button class="disease-tab active-hiv" onclick="setDisease('hiv')" id="tab-hiv">HIV / AIDS</button>
+      <button class="disease-tab" onclick="setDisease('gon')" id="tab-gon">Gonorrhea</button>
+      <button class="disease-tab" onclick="setDisease('syph')" id="tab-syph">Syphilis</button>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- ═══════════════ HIV SECTION ═══════════════ -->
+  <div class="disease-section visible" id="section-hiv">
+
+    <div class="section-label" style="color:var(--hiv)">Key Metrics — HIV/AIDS</div>
+    <div class="metrics-grid">
+      <div class="metric-card c-hiv">
+        <div class="metric-badge badge-hiv">Prevalence</div>
+        <div class="metric-label">Adults 15–49 Tracked</div>
+        <div class="metric-value c-hiv">192</div>
+        <div class="metric-sub">Countries in latest dataset (2024)</div>
+      </div>
+      <div class="metric-card c-hiv">
+        <div class="metric-badge badge-hiv">New Infections</div>
+        <div class="metric-label">Global — 2024</div>
+        <div class="metric-value c-hiv">35.2M</div>
+        <div class="metric-sub">Cumulative tracked infections (all countries)</div>
+      </div>
+      <div class="metric-card c-hiv">
+        <div class="metric-badge badge-hiv">Mortality</div>
+        <div class="metric-label">Deaths — 2024</div>
+        <div class="metric-value c-hiv">523K</div>
+        <div class="metric-sub">Down from 1.74M peak in 2004</div>
+      </div>
+      <div class="metric-card c-neutral">
+        <div class="metric-badge badge-neutral">Trend</div>
+        <div class="metric-label">Countries Increasing</div>
+        <div class="metric-value" style="color:var(--hiv)">55.1%</div>
+        <div class="metric-sub">Of records show upward YOY trend</div>
+      </div>
+      <div class="metric-card c-neutral">
+        <div class="metric-badge badge-neutral">High Burden</div>
+        <div class="metric-label">High-Burden Records</div>
+        <div class="metric-value c-neu">618</div>
+        <div class="metric-sub">Indicator-country combinations, 2024</div>
+      </div>
+    </div>
+
+    <div class="insight-box">
+      <div class="insight-item">
+        <div class="ins-label">Highest burden country</div>
+        <div class="ins-value ins-hiv">South Africa</div>
+        <div class="ins-desc">170,000 prevalence records · Africa region</div>
+      </div>
+      <div class="insight-item">
+        <div class="ins-label">Peak mortality year</div>
+        <div class="ins-value ins-white">2004 · 1.74M deaths</div>
+        <div class="ins-desc">Deaths fell 70% to 523K by 2024</div>
+      </div>
+      <div class="insight-item">
+        <div class="ins-label">Hardest-hit region</div>
+        <div class="ins-value ins-hiv">Africa · 117M+</div>
+        <div class="ins-desc">Accounts for majority of aggregated burden</div>
+      </div>
+      <div class="insight-item">
+        <div class="ins-label">Years of surveillance</div>
+        <div class="ins-value ins-white">34 Years</div>
+        <div class="ins-desc">1990–2024 · 192 countries tracked</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="color:var(--hiv)">Trends Over Time</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">HIV Prevalence Trend (15–49)</div>
+        <div class="chart-subtitle">Aggregated global prevalence index · 2000–2024</div>
+        <div class="chart-container" style="height:260px">
+          <canvas id="hivPrevChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">HIV Deaths — Global Trend</div>
+        <div class="chart-subtitle">Total recorded deaths · 2000–2024</div>
+        <div class="chart-container" style="height:260px">
+          <canvas id="hivDeathChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="color:var(--hiv)">Regional &amp; Country Analysis</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Regional HIV Burden</div>
+        <div class="chart-subtitle">Aggregated metric values by WHO region · 2024</div>
+        <div class="chart-container" style="height:280px">
+          <canvas id="hivRegionChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Top 10 Countries — HIV Prevalence</div>
+        <div class="chart-subtitle">Adults 15–49 · Latest available year</div>
+        <div style="overflow-y:auto;max-height:300px;margin-top:4px">
+          <table class="tier-table">
+            <thead>
+              <tr><th>#</th><th>Country</th><th>Region</th><th>Value</th><th>Tier</th><th>Trend</th></tr>
+            </thead>
+            <tbody>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">01</td><td><strong>South Africa</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">170,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">02</td><td><strong>Mozambique</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">92,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">03</td><td><strong>India</strong></td><td>S-E Asia</td><td style="font-family:'DM Mono',monospace">64,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">04</td><td><strong>Brazil</strong></td><td>Americas</td><td style="font-family:'DM Mono',monospace">55,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">05</td><td><strong>Nigeria</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">48,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">06</td><td><strong>Tanzania</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">43,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">07</td><td><strong>Uganda</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">37,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">08</td><td><strong>Philippines</strong></td><td>W. Pacific</td><td style="font-family:'DM Mono',monospace">31,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">09</td><td><strong>Zambia</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">30,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">10</td><td><strong>DR Congo</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">26,000</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ GONORRHEA SECTION ═══════════════ -->
+  <div class="disease-section" id="section-gon">
+
+    <div class="section-label" style="color:var(--gon)">Key Metrics — Gonorrhea</div>
+    <div class="metrics-grid">
+      <div class="metric-card c-gon">
+        <div class="metric-badge badge-gon">Cases</div>
+        <div class="metric-label">Countries Tracked</div>
+        <div class="metric-value c-gon">33</div>
+        <div class="metric-sub">Reporting countries in 2023</div>
+      </div>
+      <div class="metric-card c-gon">
+        <div class="metric-badge badge-gon">Peak Year</div>
+        <div class="metric-label">2021 Peak Cases</div>
+        <div class="metric-value c-gon">825K</div>
+        <div class="metric-sub">825,499 reported across all countries</div>
+      </div>
+      <div class="metric-card c-gon">
+        <div class="metric-badge badge-gon">Latest</div>
+        <div class="metric-label">2023 Reported Cases</div>
+        <div class="metric-value c-gon">706K</div>
+        <div class="metric-sub">Down from 2021 peak (−14.5%)</div>
+      </div>
+      <div class="metric-card c-neutral">
+        <div class="metric-badge badge-neutral">High Burden</div>
+        <div class="metric-label">High-Burden Countries</div>
+        <div class="metric-value c-neu">9</div>
+        <div class="metric-sub">Out of 33 reporting nations</div>
+      </div>
+      <div class="metric-card c-neutral">
+        <div class="metric-badge badge-neutral">Trend</div>
+        <div class="metric-label">Decreasing Countries</div>
+        <div class="metric-value" style="color:var(--positive)">45.5%</div>
+        <div class="metric-sub">Majority trending downward in 2023</div>
+      </div>
+    </div>
+
+    <div class="insight-box">
+      <div class="insight-item">
+        <div class="ins-label">Highest burden country</div>
+        <div class="ins-value ins-gon">United States</div>
+        <div class="ins-desc">601,319 cases · Americas · HIGH tier</div>
+      </div>
+      <div class="insight-item">
+        <div class="ins-label">Fastest growth region</div>
+        <div class="ins-value ins-white">Americas · 601K</div>
+        <div class="ins-desc">Dominates global case count by wide margin</div>
+      </div>
+      <div class="insight-item">
+        <div class="ins-label">European highest burden</div>
+        <div class="ins-value ins-gon">Spain · 34,072</div>
+        <div class="ins-desc">Highest in Europe, 2023 · HIGH tier</div>
+      </div>
+      <div class="insight-item">
+        <div class="ins-label">Data coverage</div>
+        <div class="ins-value ins-white">2010–2023</div>
+        <div class="ins-desc">14 years of reported case surveillance</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="color:var(--gon)">Trend &amp; Regional Analysis</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Reported Gonorrhea Cases — Global</div>
+        <div class="chart-subtitle">Aggregated reported cases · 2010–2023</div>
+        <div class="chart-container" style="height:270px">
+          <canvas id="gonTrendChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Regional Distribution</div>
+        <div class="chart-subtitle">Aggregated case burden by WHO region · 2023</div>
+        <div class="chart-container" style="height:270px">
+          <canvas id="gonRegionChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="color:var(--gon)">Country Rankings</div>
+    <div class="charts-grid">
+      <div class="chart-card chart-full">
+        <div class="chart-title">Top 10 Countries — Reported Gonorrhea Cases (2023)</div>
+        <div class="chart-subtitle">Source: WHO Global Surveillance · HIGH tier = confirmed elevated burden</div>
+        <div class="chart-container" style="height:260px;margin-top:8px">
+          <canvas id="gonCountryChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SYPHILIS SECTION ═══════════════ -->
+  <div class="disease-section" id="section-syph">
+
+    <div class="section-label" style="color:var(--syph)">Key Metrics — Syphilis</div>
+    <div class="metrics-grid">
+      <div class="metric-card c-syph">
+        <div class="metric-badge badge-syph">Coverage</div>
+        <div class="metric-label">Countries Tracked</div>
+        <div class="metric-value c-syph">99</div>
+        <div class="metric-sub">Reporting nations, 2024</div>
+      </div>
+      <div class="metric-card c-syph">
+        <div class="metric-badge badge-syph">Congenital</div>
+        <div class="metric-label">2024 Congenital Cases</div>
+        <div class="metric-value c-syph">44.7K</div>
+        <div class="metric-sub">Highest on record in dataset</div>
+      </div>
+      <div class="metric-card c-syph">
+        <div class="metric-badge badge-syph">High Burden</div>
+        <div class="metric-label">High-Burden Records</div>
+        <div class="metric-value c-syph">95</div>
+        <div class="metric-sub">Country-indicator combinations, 2024</div>
+      </div>
+      <div class="metric-card c-neutral">
+        <div class="metric-badge badge-neutral">Trend</div>
+        <div class="metric-label">Countries Increasing</div>
+        <div class="metric-value" style="color:var(--hiv)">48.7%</div>
+        <div class="metric-sub">Nearly half trending upward in 2024</div>
+      </div>
+      <div class="metric-card c-neutral">
+        <div class="metric-badge badge-neutral">Curable</div>
+        <div class="metric-label">Treatment Available</div>
+        <div class="metric-value" style="color:var(--positive)">Yes</div>
+        <div class="metric-sub">Bacterial — treatable with antibiotics</div>
+      </div>
+    </div>
+
+    <div class="insight-box">
+      <div class="insight-item">
+        <div class="ins-label">Highest burden country</div>
+        <div class="ins-value ins-syph">DR Congo</div>
+        <div class="ins-desc">20,772 aggregated cases · Africa region</div>
+      </div>
+      <div class="insight-item">
+        <div class="ins-label">Alarming spike year</div>
+        <div class="ins-value ins-white">2024 · 44,715</div>
+        <div class="ins-desc">Congenital cases — highest since records began</div>
+      </div>
+      <div class="insight-item">
+        <div class="ins-label">Most affected region</div>
+        <div class="ins-value ins-syph">Africa · 43,845</div>
+        <div class="ins-desc">Aggregated burden far exceeds other regions</div>
+      </div>
+      <div class="insight-item">
+        <div class="ins-label">Key concern</div>
+        <div class="ins-value ins-white">Congenital Rise</div>
+        <div class="ins-desc">Cases rose 100× from 2011 to 2024 in dataset</div>
+      </div>
+    </div>
+
+    <div class="section-label" style="color:var(--syph)">Congenital Syphilis Trend</div>
+    <div class="charts-grid">
+      <div class="chart-card chart-full">
+        <div class="chart-title">Congenital Syphilis Cases — Global Trend</div>
+        <div class="chart-subtitle">Reported congenital cases (aggregated) · 2004–2024 · Dramatic surge post-2012</div>
+        <div class="chart-container" style="height:280px">
+          <canvas id="syphTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="color:var(--syph)">Regional &amp; Country Analysis</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Regional Burden Distribution</div>
+        <div class="chart-subtitle">Aggregated syphilis burden · WHO regions · 2024</div>
+        <div class="chart-container" style="height:270px">
+          <canvas id="syphRegionChart"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Top 10 Countries — Syphilis Burden</div>
+        <div class="chart-subtitle">Aggregated metric values · Latest available year</div>
+        <div style="overflow-y:auto;max-height:300px;margin-top:4px">
+          <table class="tier-table">
+            <thead>
+              <tr><th>#</th><th>Country</th><th>Region</th><th>Value</th><th>Tier</th><th>Trend</th></tr>
+            </thead>
+            <tbody>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">01</td><td><strong>DR Congo</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">20,772</td><td><span class="tier-badge tier-LOW">LOW</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">02</td><td><strong>Tanzania</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">10,191</td><td><span class="tier-badge tier-MEDIUM">MED</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">03</td><td><strong>Sierra Leone</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">3,136</td><td><span class="tier-badge tier-LOW">LOW</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">04</td><td><strong>Zambia</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">2,958</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">05</td><td><strong>Thailand</strong></td><td>S-E Asia</td><td style="font-family:'DM Mono',monospace">1,766</td><td><span class="tier-badge tier-MEDIUM">MED</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">06</td><td><strong>Colombia</strong></td><td>Americas</td><td style="font-family:'DM Mono',monospace">1,464</td><td><span class="tier-badge tier-MEDIUM">MED</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">07</td><td><strong>Argentina</strong></td><td>Americas</td><td style="font-family:'DM Mono',monospace">1,318</td><td><span class="tier-badge tier-HIGH">HIGH</span></td><td class="trend-neu">→</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">08</td><td><strong>Venezuela</strong></td><td>Americas</td><td style="font-family:'DM Mono',monospace">1,015</td><td><span class="tier-badge tier-MEDIUM">MED</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">09</td><td><strong>Zimbabwe</strong></td><td>Africa</td><td style="font-family:'DM Mono',monospace">982</td><td><span class="tier-badge tier-MEDIUM">MED</span></td><td class="trend-up">↑</td></tr>
+              <tr><td style="color:var(--muted);font-family:'DM Mono',monospace;font-size:0.7rem">10</td><td><strong>Solomon Islands</strong></td><td>W. Pacific</td><td style="font-family:'DM Mono',monospace">871</td><td><span class="tier-badge tier-LOW">LOW</span></td><td class="trend-up">↑</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <strong>Source:</strong> WHO Global Health Observatory · Global STI Intelligence Dataset (Kaggle) ·
+  Diseases covered: HIV/AIDS, Gonorrhea, Syphilis · Data range: 1990–2024 · 67,438 records · 194 countries
+</footer>
+
+<script>
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.color = '#6b6560';
+
+const HIV  = '#e63946';
+const GON  = '#0d9488';
+const SYPH = '#d97706';
+const GRAY = '#94a3b8';
+
+// ── Active disease state ──────────────────────────────────
+let activeDisease = 'hiv';
+const charts = {};
+
+function setDisease(d) {
+  activeDisease = d;
+  ['hiv','gon','syph'].forEach(x => {
+    document.getElementById('section-' + x).classList.toggle('visible', x === d);
+    const tab = document.getElementById('tab-' + x);
+    tab.className = 'disease-tab' + (x === d ? ' active-' + x : '');
+  });
+}
+
+// ── DATA ─────────────────────────────────────────────────
+const years2000 = [2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024];
+
+const hivPrev   = [2400920,2343910,2275730,2211790,2142280,2072610,2002950,1915870,1862230,1798750,1763280,1687040,1618660,1573420,1504220,1462960,1424700,1342240,1273750,1218020,1151440,1108060,1041260,981460,983870];
+const hivDeaths = [1516690,1602090,1675140,1723240,1743280,1665340,1566450,1428260,1288040,1174630,1081280,995600,926320,857020,809570,767510,729600,693560,665260,643900,607090,575290,547760,517280,523320];
+
+const gonYears = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023];
+const gonCases = [355304,375870,399822,421227,449070,540654,628255,714991,775764,822778,785336,825499,797691,706238];
+
+const syphYears = [2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024];
+const syphCases = [181,483,467,564,516,535,505,465,13970,26207,34258,31648,27342,33502,34732,35660,42324,37231,23588,38058,44715];
+
+// ── HIV CHARTS ───────────────────────────────────────────
+new Chart(document.getElementById('hivPrevChart'), {
+  type: 'line',
+  data: {
+    labels: years2000,
+    datasets: [{
+      label: 'Prevalence Index',
+      data: hivPrev,
+      borderColor: HIV,
+      backgroundColor: HIV + '18',
+      borderWidth: 2.5,
+      fill: true,
+      tension: 0.35,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()}` } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10, family: "'DM Mono',monospace" }, maxTicksLimit: 8 }, border: { display: false } },
+      y: { grid: { color: '#f0ece4' }, ticks: { font: { size: 10, family: "'DM Mono',monospace" }, callback: v => (v/1e6).toFixed(1)+'M' }, border: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('hivDeathChart'), {
+  type: 'bar',
+  data: {
+    labels: years2000,
+    datasets: [{
+      label: 'Deaths',
+      data: hivDeaths,
+      backgroundColor: hivDeaths.map((v, i) => i === 4 ? HIV : HIV + '88'),
+      borderRadius: 3,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()} deaths` } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10, family: "'DM Mono',monospace" }, maxTicksLimit: 8 }, border: { display: false } },
+      y: { grid: { color: '#f0ece4' }, ticks: { font: { size: 10, family: "'DM Mono',monospace" }, callback: v => (v/1e6).toFixed(1)+'M' }, border: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('hivRegionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Africa','S-E Asia','Europe','Americas','W. Pacific','E. Medit.'],
+    datasets: [{
+      label: 'Burden',
+      data: [117574332,80024791,40017446,11996491,7136903,4864813],
+      backgroundColor: [HIV, HIV+'cc', HIV+'aa', HIV+'88', HIV+'66', HIV+'44'],
+      borderRadius: 4, borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${(ctx.raw/1e6).toFixed(1)}M` } } },
+    scales: {
+      x: { grid: { color: '#f0ece4' }, ticks: { font: { size: 10, family: "'DM Mono',monospace" }, callback: v => (v/1e6).toFixed(0)+'M' }, border: { display: false } },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } }, border: { display: false } }
+    }
+  }
+});
+
+// ── GONORRHEA CHARTS ─────────────────────────────────────
+new Chart(document.getElementById('gonTrendChart'), {
+  type: 'line',
+  data: {
+    labels: gonYears,
+    datasets: [{
+      label: 'Reported Cases',
+      data: gonCases,
+      borderColor: GON,
+      backgroundColor: GON + '18',
+      borderWidth: 2.5,
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3,
+      pointHoverRadius: 6,
+      pointBackgroundColor: GON,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()} cases` } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10, family: "'DM Mono',monospace" } }, border: { display: false } },
+      y: { grid: { color: '#f0ece4' }, ticks: { font: { size: 10, family: "'DM Mono',monospace" }, callback: v => (v/1000).toFixed(0)+'K' }, border: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('gonRegionChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Americas', 'Europe', 'W. Pacific'],
+    datasets: [{
+      data: [601319, 97125, 7794],
+      backgroundColor: [GON, GON+'99', GON+'55'],
+      borderWidth: 3,
+      borderColor: '#ffffff',
+      hoverBorderColor: '#ffffff',
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 16 } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw.toLocaleString()}` } }
+    },
+    cutout: '62%'
+  }
+});
+
+new Chart(document.getElementById('gonCountryChart'), {
+  type: 'bar',
+  data: {
+    labels: ['United States','Spain','Netherlands','France','New Zealand','Belgium','Ireland','Sweden','Denmark','Norway'],
+    datasets: [{
+      label: 'Reported Cases (2023)',
+      data: [601319,34072,13853,10723,7794,6622,6440,4215,4085,2985],
+      backgroundColor: [GON,GON+'cc',GON+'cc',GON+'cc',GON+'cc',GON+'cc',GON+'cc',GON+'99',GON+'99',GON+'66'],
+      borderRadius: 4, borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()} cases` } } },
+    scales: {
+      x: { grid: { color: '#f0ece4' }, ticks: { font: { size: 10, family: "'DM Mono',monospace" }, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'K' : v }, border: { display: false } },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } }, border: { display: false } }
+    }
+  }
+});
+
+// ── SYPHILIS CHARTS ───────────────────────────────────────
+new Chart(document.getElementById('syphTrendChart'), {
+  type: 'bar',
+  data: {
+    labels: syphYears,
+    datasets: [{
+      label: 'Congenital Cases',
+      data: syphCases,
+      backgroundColor: syphCases.map((v, i) => i >= 8 ? SYPH + 'dd' : SYPH + '55'),
+      borderRadius: 4, borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()} cases` } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10, family: "'DM Mono',monospace" } }, border: { display: false } },
+      y: { grid: { color: '#f0ece4' }, ticks: { font: { size: 10, family: "'DM Mono',monospace" }, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'K' : v }, border: { display: false } }
+    }
+  }
+});
+
+new Chart(document.getElementById('syphRegionChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Africa','Americas','W. Pacific','S-E Asia','Europe','E. Medit.'],
+    datasets: [{
+      label: 'Burden',
+      data: [43845,11400,4004,3108,1076,1024],
+      backgroundColor: [SYPH, SYPH+'cc', SYPH+'aa', SYPH+'88', SYPH+'66', SYPH+'44'],
+      borderRadius: 4, borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()}` } } },
+    scales: {
+      x: { grid: { color: '#f0ece4' }, ticks: { font: { size: 10, family: "'DM Mono',monospace" }, callback: v => v >= 1000 ? (v/1000).toFixed(0)+'K' : v }, border: { display: false } },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } }, border: { display: false } }
+    }
+  }
+});
+</script>
+</body>
+</html>
